@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>L'Expert-Comptable Runner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(232, 82, 10, 0.06), transparent 40%),
+      radial-gradient(circle at 90% 100%, rgba(125, 191, 160, 0.10), transparent 40%),
+      #ffffff;
+    color: #1B3A5C;
+    touch-action: manipulation;
+    -webkit-font-smoothing: antialiased;
+  }
+  #wrap {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    min-height: 100vh;
+  }
+  header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  h1 {
+    font-size: clamp(15px, 2.4vw, 22px);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #1B3A5C;
+  }
+  h1 span { color: #E8520A; }
+  .hint {
+    font-size: clamp(12px, 1.6vw, 14px);
+    color: #6b7a8a;
+    font-weight: 600;
+  }
+  #gameContainer {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 1;
+    min-height: 220px;
+    background: #ffffff;
+    border: 2px solid #1B3A5C;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(27, 58, 92, 0.08);
+  }
+  @media (max-width: 700px) {
+    #gameContainer { aspect-ratio: 16 / 9; min-height: 200px; }
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.96);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+    padding: 20px 16px;
+    z-index: 2;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #overlay.hidden { display: none; }
+  #overlay h2 {
+    font-size: clamp(20px, 3.5vw, 32px);
+    color: #1B3A5C;
+    margin-bottom: 8px;
+  }
+  #overlay p {
+    font-size: clamp(13px, 1.8vw, 15px);
+    color: #4a5b6e;
+    margin-bottom: 18px;
+    max-width: 500px;
+    line-height: 1.4;
+  }
+  #overlay .score-final {
+    font-size: clamp(16px, 2.4vw, 20px);
+    color: #E8520A;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  button {
+    background: #E8520A;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    font-size: clamp(14px, 2vw, 16px);
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+    font-family: inherit;
+  }
+  button:hover { background: #c44508; }
+  button:active { transform: scale(0.97); }
+  button.secondary {
+    background: transparent;
+    color: #1B3A5C;
+    border: 2px solid #1B3A5C;
+    padding: 10px 22px;
+  }
+  #overlay > div:has(> button) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  button.secondary:hover { background: #1B3A5C; color: white; }
+  .scoreboard {
+    background: #f7f7f5;
+    border: 1px solid #d8dde3;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 0 0 18px 0;
+    width: 100%;
+    max-width: 320px;
+  }
+  .scoreboard h3 {
+    font-size: 13px;
+    color: #1B3A5C;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .scoreboard ol {
+    list-style: none;
+    counter-reset: rank;
+    padding: 0;
+  }
+  .scoreboard li {
+    counter-increment: rank;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 13px;
+    color: #1B3A5C;
+    border-bottom: 1px dashed #e0e4e9;
+  }
+  .scoreboard li:last-child { border-bottom: none; }
+  .scoreboard li::before {
+    content: counter(rank) ".";
+    color: #E8520A;
+    font-weight: 700;
+    width: 24px;
+  }
+  .scoreboard li.empty {
+    justify-content: center;
+    color: #a0aab5;
+    font-style: italic;
+  }
+  .scoreboard li.empty::before { content: ""; width: 0; }
+  .scoreboard .score-val { font-weight: 700; }
+  .scoreboard .score-date { color: #8a96a3; font-size: 11px; margin-left: 8px; }
+  .new-record {
+    background: #E8520A;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    animation: pulse 1s infinite;
+  }
+  .share-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #d8dde3;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+  .share-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6b7a8a;
+    margin-bottom: 10px;
+  }
+  .share-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .share-buttons button {
+    padding: 9px 14px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .share-preview {
+    margin: 10px auto;
+    max-width: 280px;
+    border: 1px solid #d8dde3;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .share-preview img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .share-feedback {
+    font-size: 12px;
+    color: #2a8a3e;
+    margin-top: 8px;
+    height: 16px;
+    transition: opacity 0.3s;
+  }
+  .share-feedback.error { color: #c44508; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  footer {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #8a96a3;
+    text-align: center;
+    padding: 16px 0;
+  }
+  footer strong { color: #1B3A5C; }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1B3A5C;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+  .back-link:hover { background: rgba(27, 58, 92, 0.08); }
+  header .left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <div class="left">
+      <a href="index.html" class="back-link">← Menu</a>
+      <h1>L'EXPERT-COMPTABLE <span>RUNNER</span></h1>
+    </div>
+    <div class="hint" id="liveScore">Score : 0 m</div>
+  </header>
+  <div id="gameContainer">
+    <canvas id="game"></canvas>
+    <div id="overlay">
+      <h2>Prêt à clôturer l'exercice ?</h2>
+      <p>Aide notre expert-comptable à éviter les dossiers, liasses fiscales, tampons URGENT et lettres URSSAF.<br>
+      Appuie sur <strong>Espace</strong> ou <strong>tape l'écran</strong> pour sauter.</p>
+      <div class="scoreboard" id="startScoreboard">
+        <h3>🏆 Top 5</h3>
+        <ol id="scoreList"></ol>
+      </div>
+      <div>
+        <button id="startBtn">Commencer</button>
+        <button class="secondary" id="resetScoresBtn">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+  <footer>
+    Espace / Tap pour sauter — Bonne chance !<br>
+    <strong>Mosselmans & Associés</strong> — L'Arcade du Comptable
+  </footer>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const liveScore = document.getElementById('liveScore');
+  const scoreList = document.getElementById('scoreList');
+  const resetScoresBtn = document.getElementById('resetScoresBtn');
+
+  const STORAGE_KEY = 'expertComptableRunner_highScores';
+  const MAX_SCORES = 5;
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveScores(scores) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+    } catch (e) {}
+  }
+
+  function addScore(value) {
+    const scores = loadScores();
+    const entry = { score: value, date: new Date().toISOString() };
+    scores.push(entry);
+    scores.sort((a, b) => b.score - a.score);
+    const trimmed = scores.slice(0, MAX_SCORES);
+    saveScores(trimmed);
+    const rank = trimmed.findIndex(s => s === entry);
+    return { rank: rank === -1 ? -1 : rank + 1, isNewRecord: rank === 0 && value > 0 };
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+
+  function generateShareImage(scoreValue, isRecord) {
+    const w = 1080, h = 1080;
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const c = off.getContext('2d');
+
+    const grad = c.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#f0f3f7');
+    c.fillStyle = grad;
+    c.fillRect(0, 0, w, h);
+
+    c.strokeStyle = '#1B3A5C';
+    c.lineWidth = 8;
+    c.strokeRect(40, 40, w - 80, h - 80);
+
+    c.fillStyle = '#E8520A';
+    c.fillRect(40, 40, 80, 80);
+    c.fillRect(w - 120, h - 120, 80, 80);
+
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+
+    c.fillStyle = '#1B3A5C';
+    c.font = 'bold 56px sans-serif';
+    c.fillText("L'EXPERT-COMPTABLE", w / 2, 170);
+    c.fillStyle = '#E8520A';
+    c.font = 'bold 88px sans-serif';
+    c.fillText('RUNNER', w / 2, 250);
+
+    drawAccountantBig(c, w / 2 - 90, 320, 180, 260);
+
+    let cursorY = 620;
+    if (isRecord) {
+      c.fillStyle = '#E8520A';
+      c.beginPath();
+      c.roundRect(w / 2 - 240, cursorY, 480, 80, 40);
+      c.fill();
+      c.fillStyle = '#ffffff';
+      c.font = 'bold 36px sans-serif';
+      c.fillText('🏆 NOUVEAU RECORD', w / 2, cursorY + 40);
+      cursorY += 110;
+    }
+
+    c.fillStyle = '#6b7a8a';
+    c.font = '32px sans-serif';
+    c.fillText('Score final', w / 2, cursorY + 30);
+    cursorY += 60;
+
+    c.fillStyle = '#1B3A5C';
+    c.font = 'bold 180px sans-serif';
+    c.fillText(`${scoreValue}`, w / 2, cursorY + 120);
+    cursorY += 240;
+
+    c.fillStyle = '#E8520A';
+    c.font = 'bold 44px sans-serif';
+    c.fillText('mètres', w / 2, cursorY);
+
+    c.fillStyle = '#8a96a3';
+    c.font = '26px sans-serif';
+    c.fillText('À toi de me battre !', w / 2, h - 90);
+
+    c.textBaseline = 'alphabetic';
+    return off;
+  }
+
+  function drawAccountantBig(c, x, y, w, h) {
+    const ORANGE = '#E8520A', NAVY = '#1B3A5C', SKIN = '#f0c9a6', SHIRT = '#ffffff';
+    const headR = w * 0.22;
+    const headCx = x + w / 2;
+    const headCy = y + headR + 4;
+
+    c.fillStyle = SKIN;
+    c.beginPath();
+    c.arc(headCx, headCy, headR, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = NAVY;
+    c.beginPath();
+    c.arc(headCx, headCy - headR * 0.6, headR * 1.05, Math.PI, 0);
+    c.fill();
+
+    c.fillStyle = NAVY;
+    const bodyTop = headCy + headR - 4;
+    const bodyW = w * 0.7;
+    const bodyH = h * 0.45;
+    const bodyX = headCx - bodyW / 2;
+    c.fillRect(bodyX, bodyTop, bodyW, bodyH);
+
+    c.fillStyle = SHIRT;
+    c.beginPath();
+    c.moveTo(headCx, bodyTop);
+    c.lineTo(headCx - bodyW * 0.18, bodyTop + bodyH * 0.55);
+    c.lineTo(headCx + bodyW * 0.18, bodyTop + bodyH * 0.55);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = ORANGE;
+    c.beginPath();
+    c.moveTo(headCx - 8, bodyTop + 4);
+    c.lineTo(headCx + 8, bodyTop + 4);
+    c.lineTo(headCx + 14, bodyTop + bodyH * 0.5);
+    c.lineTo(headCx, bodyTop + bodyH * 0.6);
+    c.lineTo(headCx - 14, bodyTop + bodyH * 0.5);
+    c.closePath();
+    c.fill();
+
+    const legY = bodyTop + bodyH;
+    const legH = h * 0.32;
+    const legW = bodyW * 0.32;
+    c.fillStyle = '#0f2740';
+    c.fillRect(headCx - bodyW * 0.28, legY, legW, legH);
+    c.fillRect(headCx + bodyW * 0.28 - legW, legY, legW, legH);
+    c.fillStyle = '#1a1a1a';
+    c.fillRect(headCx - bodyW * 0.28, legY + legH, legW + 8, 8);
+    c.fillRect(headCx + bodyW * 0.28 - legW - 8, legY + legH, legW + 8, 8);
+
+    c.fillStyle = NAVY;
+    const armY = bodyTop + bodyH * 0.15;
+    const armW = bodyW * 0.18;
+    const armH = bodyH * 0.55;
+    c.fillRect(bodyX - armW * 0.5, armY, armW, armH);
+    c.fillRect(bodyX + bodyW - armW * 0.5, armY, armW, armH);
+
+    c.fillStyle = '#1a1a1a';
+    c.fillRect(headCx - headR * 0.5, headCy - 3, headR * 0.25, 6);
+    c.fillRect(headCx + headR * 0.25, headCy - 3, headR * 0.25, 6);
+  }
+
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      this.beginPath();
+      this.moveTo(x + r, y);
+      this.arcTo(x + w, y, x + w, y + h, r);
+      this.arcTo(x + w, y + h, x, y + h, r);
+      this.arcTo(x, y + h, x, y, r);
+      this.arcTo(x, y, x + w, y, r);
+      this.closePath();
+      return this;
+    };
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  }
+
+  async function copyImageToClipboard(canvas, feedbackEl) {
+    try {
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        throw new Error('Clipboard non supporté');
+      }
+      const blob = await canvasToBlob(canvas);
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showFeedback(feedbackEl, '✓ Image copiée ! Colle-la dans ton chat (Ctrl+V)', false);
+    } catch (e) {
+      showFeedback(feedbackEl, '⚠ Copie impossible — utilise Télécharger', true);
+    }
+  }
+
+  function downloadImage(canvas, scoreValue, feedbackEl) {
+    try {
+      const link = document.createElement('a');
+      link.download = `expert-comptable-runner-${scoreValue}m.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showFeedback(feedbackEl, '✓ Image téléchargée', false);
+    } catch (e) {
+      showFeedback(feedbackEl, '⚠ Téléchargement impossible', true);
+    }
+  }
+
+  async function shareImage(canvas, scoreValue, feedbackEl) {
+    try {
+      const blob = await canvasToBlob(canvas);
+      const file = new File([blob], `score-${scoreValue}m.png`, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "L'Expert-Comptable Runner",
+          text: `J'ai fait ${scoreValue} m sur L'Expert-Comptable Runner ! À toi de me battre 🏃‍♂️💼`
+        });
+        showFeedback(feedbackEl, '✓ Partagé', false);
+      } else {
+        await copyImageToClipboard(canvas, feedbackEl);
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        showFeedback(feedbackEl, '⚠ Partage indisponible', true);
+      }
+    }
+  }
+
+  function showFeedback(el, msg, isError) {
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'share-feedback' + (isError ? ' error' : '');
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = '0'; }, 3500);
+  }
+
+  function renderScoreboard(targetEl) {
+    const scores = loadScores();
+    if (!scores.length) {
+      targetEl.innerHTML = '<li class="empty">Aucun score enregistré</li>';
+      return;
+    }
+    targetEl.innerHTML = scores.map(s =>
+      `<li><span><span class="score-val">${s.score} m</span><span class="score-date">${formatDate(s.date)}</span></span></li>`
+    ).join('');
+  }
+
+  const ORANGE = '#E8520A';
+  const NAVY = '#1B3A5C';
+  const SKIN = '#f0c9a6';
+  const SHIRT = '#ffffff';
+
+  let W = 900, H = 300;
+  let DPR = window.devicePixelRatio || 1;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  const GROUND_Y_RATIO = 0.82;
+  let groundY = 0;
+
+  const player = {
+    x: 0, y: 0,
+    w: 44, h: 60,
+    vy: 0,
+    jumping: false,
+    runFrame: 0,
+  };
+
+  let obstacles = [];
+  let speed = 5;
+  let baseSpeed = 5;
+  let score = 0;
+  let scoreTimer = 0;
+  let spawnTimer = 0;
+  let nextSpawn = 80;
+  let running = false;
+  let gameOver = false;
+  let lastTime = 0;
+
+  const GRAVITY = 0.7;
+  const JUMP_VELOCITY = -13;
+
+  const OBSTACLE_TYPES = ['dossiers', 'liasse', 'tampon', 'urssaf'];
+
+  function reset() {
+    resize();
+    groundY = H * GROUND_Y_RATIO;
+    player.w = Math.max(36, H * 0.2);
+    player.h = Math.max(54, H * 0.28);
+    player.x = W * 0.1;
+    player.y = groundY - player.h;
+    player.vy = 0;
+    player.jumping = false;
+    obstacles = [];
+    speed = baseSpeed = Math.max(4, W * 0.006);
+    score = 0;
+    scoreTimer = 0;
+    spawnTimer = 0;
+    nextSpawn = 60 + Math.random() * 40;
+    gameOver = false;
+  }
+
+  function jump() {
+    if (!running || gameOver) return;
+    if (!player.jumping) {
+      player.vy = JUMP_VELOCITY * (H / 300);
+      player.jumping = true;
+    }
+  }
+
+  function spawnObstacle() {
+    const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+    let w, h;
+    const scale = H / 300;
+    switch (type) {
+      case 'dossiers': w = 30 * scale; h = 42 * scale; break;
+      case 'liasse':   w = 26 * scale; h = 32 * scale; break;
+      case 'tampon':   w = 34 * scale; h = 28 * scale; break;
+      case 'urssaf':   w = 30 * scale; h = 22 * scale; break;
+    }
+    obstacles.push({
+      type,
+      x: W + 20,
+      y: groundY - h,
+      w, h,
+    });
+  }
+
+  function drawGround() {
+    ctx.strokeStyle = NAVY;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(W, groundY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#c9d1da';
+    const dashCount = 12;
+    const offset = (Date.now() * speed * 0.05) % (W / dashCount);
+    for (let i = -1; i < dashCount + 1; i++) {
+      const x = i * (W / dashCount) - offset;
+      ctx.fillRect(x, groundY + 6, 18, 2);
+    }
+  }
+
+  function drawAccountant(x, y, w, h, running) {
+    const headR = w * 0.22;
+    const headCx = x + w / 2;
+    const headCy = y + headR + 2;
+
+    ctx.fillStyle = SKIN;
+    ctx.beginPath();
+    ctx.arc(headCx, headCy, headR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = NAVY;
+    ctx.beginPath();
+    ctx.arc(headCx, headCy - headR * 0.6, headR * 1.05, Math.PI, 0);
+    ctx.fill();
+
+    ctx.fillStyle = NAVY;
+    const bodyTop = headCy + headR - 2;
+    const bodyW = w * 0.7;
+    const bodyH = h * 0.45;
+    const bodyX = headCx - bodyW / 2;
+    ctx.fillRect(bodyX, bodyTop, bodyW, bodyH);
+
+    ctx.fillStyle = SHIRT;
+    ctx.beginPath();
+    ctx.moveTo(headCx, bodyTop);
+    ctx.lineTo(headCx - bodyW * 0.18, bodyTop + bodyH * 0.55);
+    ctx.lineTo(headCx + bodyW * 0.18, bodyTop + bodyH * 0.55);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = ORANGE;
+    ctx.beginPath();
+    ctx.moveTo(headCx - 3, bodyTop + 2);
+    ctx.lineTo(headCx + 3, bodyTop + 2);
+    ctx.lineTo(headCx + 5, bodyTop + bodyH * 0.5);
+    ctx.lineTo(headCx, bodyTop + bodyH * 0.6);
+    ctx.lineTo(headCx - 5, bodyTop + bodyH * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    const legY = bodyTop + bodyH;
+    const legH = h * 0.32;
+    const legW = bodyW * 0.32;
+    ctx.fillStyle = '#0f2740';
+
+    let leftLegOffset = 0, rightLegOffset = 0;
+    if (running) {
+      const phase = (player.runFrame % 20) / 20;
+      leftLegOffset = Math.sin(phase * Math.PI * 2) * legH * 0.15;
+      rightLegOffset = -leftLegOffset;
+    }
+    ctx.fillRect(headCx - bodyW * 0.28, legY + Math.abs(leftLegOffset) * 0.3, legW, legH - Math.abs(leftLegOffset) * 0.3);
+    ctx.fillRect(headCx + bodyW * 0.28 - legW, legY + Math.abs(rightLegOffset) * 0.3, legW, legH - Math.abs(rightLegOffset) * 0.3);
+
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(headCx - bodyW * 0.28, legY + legH, legW + 4, 4);
+    ctx.fillRect(headCx + bodyW * 0.28 - legW - 4, legY + legH, legW + 4, 4);
+
+    ctx.fillStyle = SKIN;
+    const armY = bodyTop + bodyH * 0.15;
+    const armW = bodyW * 0.18;
+    const armH = bodyH * 0.55;
+    let armSwing = 0;
+    if (running) armSwing = Math.sin((player.runFrame % 20) / 20 * Math.PI * 2) * 4;
+    ctx.fillStyle = NAVY;
+    ctx.fillRect(bodyX - armW * 0.5, armY + armSwing, armW, armH);
+    ctx.fillRect(bodyX + bodyW - armW * 0.5, armY - armSwing, armW, armH);
+
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(headCx - headR * 0.5, headCy - 1, headR * 0.25, 2);
+    ctx.fillRect(headCx + headR * 0.25, headCy - 1, headR * 0.25, 2);
+  }
+
+  function drawObstacle(o) {
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    switch (o.type) {
+      case 'dossiers': drawDossiers(o.w, o.h); break;
+      case 'liasse':   drawLiasse(o.w, o.h); break;
+      case 'tampon':   drawTampon(o.w, o.h); break;
+      case 'urssaf':   drawUrssaf(o.w, o.h); break;
+    }
+    ctx.restore();
+  }
+
+  function drawDossiers(w, h) {
+    const colors = ['#c44508', '#E8520A', '#f57b3a'];
+    const folderH = h / 3;
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(0, i * folderH, w, folderH - 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(0, i * folderH + folderH - 4, w, 2);
+      ctx.fillStyle = NAVY;
+      ctx.fillRect(w * 0.15, i * folderH + folderH * 0.3, w * 0.7, 1.5);
+      ctx.fillRect(w * 0.15, i * folderH + folderH * 0.55, w * 0.5, 1.5);
+    }
+  }
+
+  function drawLiasse(w, h) {
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = NAVY;
+    ctx.lineWidth = 1.5;
+    for (let i = 2; i >= 0; i--) {
+      ctx.fillStyle = i === 0 ? '#ffffff' : '#e8e8e8';
+      ctx.fillRect(i * 2, i * 2, w - i * 2, h - i * 2);
+      ctx.strokeRect(i * 2, i * 2, w - i * 2, h - i * 2);
+    }
+    ctx.fillStyle = NAVY;
+    for (let l = 0; l < 4; l++) {
+      ctx.fillRect(4, 6 + l * 5, w - 8, 1);
+    }
+    ctx.fillStyle = ORANGE;
+    ctx.fillRect(4, h - 6, w * 0.3, 2);
+  }
+
+  function drawTampon(w, h) {
+    ctx.fillStyle = '#5a3a2a';
+    ctx.fillRect(w * 0.3, 0, w * 0.4, h * 0.4);
+    ctx.fillStyle = '#8b5a3c';
+    ctx.fillRect(w * 0.2, h * 0.35, w * 0.6, h * 0.2);
+    ctx.fillStyle = ORANGE;
+    ctx.fillRect(0, h * 0.55, w, h * 0.45);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(2, h * 0.55 + 2, w - 4, h * 0.45 - 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${Math.floor(h * 0.22)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('URG', w / 2, h * 0.78);
+  }
+
+  function drawUrssaf(w, h) {
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = NAVY;
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeRect(0, 0, w, h);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(w / 2, h * 0.55);
+    ctx.lineTo(w, 0);
+    ctx.stroke();
+    ctx.fillStyle = ORANGE;
+    ctx.fillRect(w * 0.55, h * 0.65, w * 0.4, h * 0.25);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${Math.floor(h * 0.2)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('URSSAF', w * 0.75, h * 0.78);
+  }
+
+  function rectsCollide(a, b) {
+    const pad = 6;
+    return (
+      a.x + pad < b.x + b.w &&
+      a.x + a.w - pad > b.x &&
+      a.y + pad < b.y + b.h &&
+      a.y + a.h - pad > b.y
+    );
+  }
+
+  function update() {
+    if (!running || gameOver) return;
+
+    speed += 0.0015;
+
+    player.vy += GRAVITY * (H / 300);
+    player.y += player.vy;
+    if (player.y >= groundY - player.h) {
+      player.y = groundY - player.h;
+      player.vy = 0;
+      player.jumping = false;
+    }
+    if (!player.jumping) player.runFrame++;
+
+    spawnTimer++;
+    if (spawnTimer >= nextSpawn) {
+      spawnObstacle();
+      spawnTimer = 0;
+      const minGap = Math.max(40, 90 - speed * 3);
+      const maxGap = Math.max(80, 160 - speed * 4);
+      nextSpawn = minGap + Math.random() * (maxGap - minGap);
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      obstacles[i].x -= speed;
+      if (obstacles[i].x + obstacles[i].w < 0) {
+        obstacles.splice(i, 1);
+      }
+    }
+
+    const playerBox = { x: player.x, y: player.y, w: player.w, h: player.h };
+    for (const o of obstacles) {
+      if (rectsCollide(playerBox, o)) {
+        endGame();
+        return;
+      }
+    }
+
+    scoreTimer++;
+    if (scoreTimer >= 3) {
+      score++;
+      scoreTimer = 0;
+      liveScore.textContent = `Score : ${score} m`;
+    }
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = 'rgba(27, 58, 92, 0.04)';
+    const t = Date.now() * 0.01;
+    for (let i = 0; i < 3; i++) {
+      const cx = ((i * 350) - (t * 0.5 % 350) + W) % (W + 200) - 100;
+      ctx.beginPath();
+      ctx.arc(cx, H * 0.25 + i * 15, 30, 0, Math.PI * 2);
+      ctx.arc(cx + 25, H * 0.25 + i * 15, 25, 0, Math.PI * 2);
+      ctx.arc(cx - 20, H * 0.25 + i * 15, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawGround();
+
+    for (const o of obstacles) drawObstacle(o);
+
+    drawAccountant(player.x, player.y, player.w, player.h, !player.jumping && running);
+
+    ctx.fillStyle = NAVY;
+    ctx.font = `bold ${Math.max(14, H * 0.06)}px sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`${score} m`, W - 16, 12);
+  }
+
+  function loop(ts) {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    reset();
+    overlay.classList.add('hidden');
+    running = true;
+    gameOver = false;
+    liveScore.textContent = `Score : 0 m`;
+  }
+
+  function endGame() {
+    running = false;
+    gameOver = true;
+    const result = addScore(score);
+    const recordBanner = result.isNewRecord
+      ? `<div class="new-record">🏆 NOUVEAU RECORD !</div>`
+      : (result.rank > 0 ? `<div class="new-record" style="background:#1B3A5C">Top ${result.rank} !</div>` : '');
+    const scores = loadScores();
+    const scoreboardHtml = scores.length
+      ? scores.map(s => `<li><span><span class="score-val">${s.score} m</span><span class="score-date">${formatDate(s.date)}</span></span></li>`).join('')
+      : '<li class="empty">Aucun score enregistré</li>';
+
+    const shareCanvas = generateShareImage(score, result.isNewRecord);
+    const previewUrl = shareCanvas.toDataURL('image/png');
+    const canNativeShare = !!(navigator.canShare && navigator.share);
+
+    overlay.innerHTML = `
+      ${recordBanner}
+      <h2>Exercice clôturé !</h2>
+      <div class="score-final">Score final : ${score} m</div>
+      <div class="scoreboard">
+        <h3>🏆 Top 5</h3>
+        <ol>${scoreboardHtml}</ol>
+      </div>
+      <div class="share-section">
+        <h3>Partage ton score</h3>
+        <div class="share-preview"><img src="${previewUrl}" alt="Score"></div>
+        <div class="share-buttons">
+          <button id="copyImgBtn">📋 Copier</button>
+          <button id="downloadImgBtn" class="secondary">⬇ Télécharger</button>
+          ${canNativeShare ? `<button id="nativeShareBtn" class="secondary">📤 Partager</button>` : ''}
+        </div>
+        <div class="share-feedback" id="shareFeedback"></div>
+      </div>
+      <div style="margin-top: 14px;">
+        <button id="restartBtn">Rejouer</button>
+      </div>
+    `;
+    overlay.classList.remove('hidden');
+
+    const feedbackEl = document.getElementById('shareFeedback');
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+    document.getElementById('copyImgBtn').addEventListener('click', () => copyImageToClipboard(shareCanvas, feedbackEl));
+    document.getElementById('downloadImgBtn').addEventListener('click', () => downloadImage(shareCanvas, score, feedbackEl));
+    const nativeBtn = document.getElementById('nativeShareBtn');
+    if (nativeBtn) nativeBtn.addEventListener('click', () => shareImage(shareCanvas, score, feedbackEl));
+  }
+
+  startBtn.addEventListener('click', startGame);
+
+  resetScoresBtn.addEventListener('click', () => {
+    if (confirm('Effacer tous les scores enregistrés ?')) {
+      saveScores([]);
+      renderScoreboard(scoreList);
+    }
+  });
+
+  renderScoreboard(scoreList);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+      e.preventDefault();
+      if (!running && !gameOver) {
+        startGame();
+      } else if (gameOver) {
+        startGame();
+      } else {
+        jump();
+      }
+    }
+  });
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!running && !gameOver) startGame();
+    else if (gameOver) startGame();
+    else jump();
+  }, { passive: false });
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (running && !gameOver) jump();
+  });
+
+  resize();
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
