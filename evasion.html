@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>L'Évasion du Comptable — Mosselmans Arcade</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f7f7f5;
+    color: #1B3A5C;
+    touch-action: manipulation;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  #wrap {
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header .left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #1B3A5C;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(27, 58, 92, 0.05);
+    transition: background 0.2s;
+  }
+  .back-link:hover { background: rgba(27, 58, 92, 0.12); }
+  h1 {
+    font-size: clamp(15px, 2.4vw, 22px);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  h1 span { color: #E8520A; }
+
+  .hud {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: #1B3A5C;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px 8px 0 0;
+    gap: 8px;
+  }
+  .hud-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+  .hud-label {
+    font-size: 10px;
+    color: #c9d1da;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .hud-value {
+    font-size: clamp(14px, 2.2vw, 18px);
+    font-weight: 700;
+    color: #E8520A;
+  }
+  .hud-value.alert { color: #ff8a6b; }
+  .hud-value.ok { color: #7DBFA0; }
+
+  #gameContainer {
+    position: relative;
+    width: 100%;
+    background: #ffffff;
+    border: 2px solid #1B3A5C;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    overflow: auto;
+    box-shadow: 0 6px 18px rgba(27, 58, 92, 0.08);
+    max-height: 80vh;
+  }
+  #game {
+    display: block;
+    width: 1200px;
+    height: 900px;
+    background: #e9ecef;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.96);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px 18px;
+    z-index: 10;
+    overflow-y: auto;
+  }
+  #overlay.hidden { display: none; }
+  #overlay h2 {
+    font-size: clamp(22px, 4vw, 32px);
+    color: #1B3A5C;
+    margin-bottom: 10px;
+  }
+  #overlay p {
+    font-size: clamp(13px, 1.8vw, 15px);
+    color: #4a5b6e;
+    margin-bottom: 14px;
+    max-width: 500px;
+    line-height: 1.5;
+  }
+  #overlay .final-stats {
+    font-size: clamp(14px, 2vw, 16px);
+    color: #E8520A;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  button {
+    background: #E8520A;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    font-size: clamp(14px, 2vw, 16px);
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.1s, background 0.2s;
+  }
+  button:hover { background: #c44508; }
+  button:active { transform: scale(0.97); }
+  button.secondary {
+    background: transparent;
+    color: #1B3A5C;
+    border: 2px solid #1B3A5C;
+    padding: 10px 22px;
+  }
+  button.secondary:hover { background: #1B3A5C; color: white; }
+  .overlay-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .help {
+    font-size: 12px;
+    color: #6b7a8a;
+    margin-top: 16px;
+    line-height: 1.6;
+  }
+  .help kbd {
+    background: #1B3A5C;
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  /* Mobile touch d-pad */
+  .touch-controls {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 14px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .touch-controls .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .dpad {
+    display: grid;
+    grid-template-columns: 56px 56px 56px;
+    grid-template-rows: 56px 56px 56px;
+    gap: 4px;
+    pointer-events: auto;
+  }
+  .dpad .btn {
+    background: rgba(27, 58, 92, 0.7);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  .dpad .btn:active { background: rgba(232, 82, 10, 0.85); }
+  .dpad .empty { background: transparent; pointer-events: none; }
+  .hide-btn {
+    pointer-events: auto;
+    background: #E8520A;
+    color: white;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 6px 14px rgba(232, 82, 10, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  @media (max-width: 900px) {
+    .touch-controls { display: block; }
+    #gameContainer { max-height: 70vh; }
+  }
+
+  footer {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #8a96a3;
+    text-align: center;
+    padding: 16px 0;
+  }
+  footer strong { color: #1B3A5C; }
+
+  /* Minimap */
+  #minimap {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 180px;
+    height: 135px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #1B3A5C;
+    border-radius: 6px;
+    z-index: 4;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <div class="left">
+      <a href="index.html" class="back-link">← Menu</a>
+      <h1>L'ÉVASION DU <span>COMPTABLE</span></h1>
+    </div>
+  </header>
+
+  <div class="hud">
+    <div class="hud-item">
+      <span class="hud-label">Dossiers</span>
+      <span class="hud-value" id="hudFiles">0/8</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Temps</span>
+      <span class="hud-value" id="hudTime">0:00</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Alertes</span>
+      <span class="hud-value" id="hudAlerts">0</span>
+    </div>
+  </div>
+
+  <div id="gameContainer">
+    <canvas id="game" width="1200" height="900"></canvas>
+    <canvas id="minimap" width="180" height="135"></canvas>
+    <div id="overlay">
+      <h2>Prêt à t'éclipser du bureau ?</h2>
+      <p>Récupère les <strong>8 dossiers</strong> dispersés dans l'open-space, puis fuis par la porte <strong>EXIT</strong> en bas à droite. Évite les cônes de vision — cache-toi (<kbd>Espace</kbd>) si on te repère.</p>
+      <p class="help">
+        Déplacement : <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> ou <kbd>ZQSD</kbd><br>
+        Se cacher / interagir : <kbd>Espace</kbd> (sur une cachette)<br>
+        Sur mobile : croix directionnelle + bouton CACHÉ
+      </p>
+      <button id="startBtn">Commencer</button>
+    </div>
+  </div>
+
+  <footer>
+    <strong>Mosselmans &amp; Associés</strong> — L'Arcade du Comptable
+  </footer>
+</div>
+
+<div class="touch-controls" id="touchControls">
+  <div class="row">
+    <div class="dpad" id="dpad">
+      <div class="empty"></div>
+      <div class="btn" data-dir="up">↑</div>
+      <div class="empty"></div>
+      <div class="btn" data-dir="left">←</div>
+      <div class="empty"></div>
+      <div class="btn" data-dir="right">→</div>
+      <div class="empty"></div>
+      <div class="btn" data-dir="down">↓</div>
+      <div class="empty"></div>
+    </div>
+    <div class="hide-btn" id="hideBtn">CACHÉ</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  /* =====================================================
+     CONSTANTS & PALETTE
+  ===================================================== */
+  const W = 1200, H = 900;
+  const NAVY = '#1B3A5C';
+  const ORANGE = '#E8520A';
+  const GREEN = '#7DBFA0';
+  const FLOOR = '#f1f3f5';
+  const FLOOR_ALT = '#e6e9ed';
+  const WALL = '#1B3A5C';
+  const FURNITURE = '#9aa9b9';
+  const FURNITURE_DARK = '#7a8a9a';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const minimap = document.getElementById('minimap');
+  const mctx = minimap.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const hudFiles = document.getElementById('hudFiles');
+  const hudTime = document.getElementById('hudTime');
+  const hudAlerts = document.getElementById('hudAlerts');
+  const gameContainer = document.getElementById('gameContainer');
+
+  /* =====================================================
+     MAP — walls, hiding spots, collectibles, exit
+     Coordinates use the 1200x900 world space.
+     Layout:
+       Top half (y 0..440): open-space | meeting room | chef office
+       Mid corridor (y 440..520) — horizontal hallway
+       Bottom half (y 520..900): kitchen | toilets | corridor | exit
+  ===================================================== */
+  const walls = [
+    /* Outer walls (16px thick) */
+    { x: 0,    y: 0,    w: 1200, h: 16 },
+    { x: 0,    y: 884,  w: 1200, h: 16 },
+    { x: 0,    y: 0,    w: 16,   h: 900 },
+    { x: 1184, y: 0,    w: 16,   h: 900 },
+
+    /* Top row vertical separators */
+    /* Open-space | Meeting room */
+    { x: 480, y: 16, w: 12, h: 220 },
+    { x: 480, y: 290, w: 12, h: 150 },
+    /* Meeting room | Chef office */
+    { x: 820, y: 16, w: 12, h: 200 },
+    { x: 820, y: 270, w: 12, h: 170 },
+
+    /* Horizontal separator between top and corridor (y=440..452) */
+    { x: 16,  y: 440, w: 280, h: 12 },
+    { x: 360, y: 440, w: 280, h: 12 },
+    { x: 700, y: 440, w: 280, h: 12 },
+    { x: 1040, y: 440, w: 144, h: 12 },
+
+    /* Horizontal separator between corridor and bottom rooms (y=520..532) */
+    { x: 16,  y: 520, w: 220, h: 12 },
+    { x: 300, y: 520, w: 180, h: 12 },
+    { x: 540, y: 520, w: 220, h: 12 },
+    { x: 820, y: 520, w: 364, h: 12 },
+
+    /* Bottom row vertical separators */
+    /* Kitchen | Toilets */
+    { x: 280, y: 532, w: 12, h: 352 },
+    /* Toilets | Bottom corridor */
+    { x: 520, y: 532, w: 12, h: 240 },
+    { x: 520, y: 820, w: 12, h: 64 },
+    /* Bottom corridor | Exit lane */
+    { x: 820, y: 532, w: 12, h: 240 },
+
+    /* Furniture as collision rectangles — open-space desks */
+    { x: 60,  y: 80,  w: 140, h: 50, kind: 'desk' },
+    { x: 60,  y: 200, w: 140, h: 50, kind: 'desk' },
+    { x: 60,  y: 320, w: 140, h: 50, kind: 'desk' },
+    { x: 290, y: 80,  w: 140, h: 50, kind: 'desk' },
+    { x: 290, y: 200, w: 140, h: 50, kind: 'desk' },
+    { x: 290, y: 320, w: 140, h: 50, kind: 'desk' },
+
+    /* Meeting room table */
+    { x: 560, y: 130, w: 220, h: 200, kind: 'table' },
+
+    /* Chef desk */
+    { x: 880, y: 80, w: 240, h: 70, kind: 'desk' },
+    { x: 880, y: 280, w: 120, h: 80, kind: 'cabinet' },
+
+    /* Kitchen counter */
+    { x: 40,  y: 580, w: 220, h: 50, kind: 'counter' },
+    { x: 40,  y: 800, w: 100, h: 60, kind: 'cabinet' },
+
+    /* Toilet stalls */
+    { x: 312, y: 580, w: 80, h: 100, kind: 'stall' },
+    { x: 412, y: 580, w: 80, h: 100, kind: 'stall' },
+
+    /* Corridor cabinet (hiding wall) */
+    { x: 560, y: 560, w: 240, h: 50, kind: 'cabinet' },
+
+    /* Bottom corridor furniture */
+    { x: 860, y: 580, w: 150, h: 70, kind: 'desk' },
+    { x: 860, y: 700, w: 150, h: 70, kind: 'desk' },
+  ];
+
+  /* Hiding spots — rectangles where pressing SPACE hides the player */
+  const hidingSpots = [
+    { x: 80,  y: 130, w: 100, h: 60, label: 'Sous un bureau' },     /* open-space first desk */
+    { x: 310, y: 250, w: 100, h: 60, label: 'Sous un bureau' },     /* open-space middle desk */
+    { x: 80,  y: 640, w: 180, h: 60, label: 'Derrière le comptoir' },/* kitchen behind counter */
+    { x: 312, y: 690, w: 180, h: 70, label: 'Toilettes' },          /* toilet stall area */
+    { x: 580, y: 615, w: 200, h: 50, label: 'Derrière l\'armoire' },/* corridor cabinet hide */
+  ];
+
+  /* Collectibles — 8 items */
+  const items = [
+    { type: 'folder',   emoji: '📁', name: 'Dossier client',  x: 100, y: 60,  taken: false },
+    { type: 'folder',   emoji: '📁', name: 'Dossier client',  x: 330, y: 180, taken: false },
+    { type: 'folder',   emoji: '📁', name: 'Dossier client',  x: 100, y: 300, taken: false },
+    { type: 'chart',    emoji: '📊', name: 'Tableau de bord', x: 620, y: 100, taken: false },
+    { type: 'chart',    emoji: '📊', name: 'Tableau de bord', x: 740, y: 360, taken: false },
+    { type: 'badge',    emoji: '🔑', name: 'Badge d\'accès',  x: 1050, y: 100, taken: false },
+    { type: 'usb',      emoji: '💾', name: 'Clé USB',         x: 180, y: 750, taken: false },
+    { type: 'contract', emoji: '📋', name: 'Contrat signé',   x: 750, y: 480, taken: false },
+  ];
+
+  /* Exit door */
+  const exitDoor = { x: 1080, y: 836, w: 88, h: 48 };
+
+  /* =====================================================
+     PLAYER
+  ===================================================== */
+  const player = {
+    x: 100, y: 480,
+    r: 13,
+    vx: 0, vy: 0,
+    speed: 2.6,
+    hidden: false,
+    facing: 0,
+  };
+
+  /* =====================================================
+     ENEMIES
+  ===================================================== */
+  /* Collègue patrol path through the open-space */
+  const colleguePath = [
+    { x: 80,  y: 60 },
+    { x: 450, y: 60 },
+    { x: 450, y: 380 },
+    { x: 80,  y: 380 },
+  ];
+
+  const enemies = [
+    {
+      kind: 'collegue',
+      label: 'Collègue',
+      x: 80, y: 60,
+      r: 13,
+      speed: 1.05,
+      chaseSpeed: 1.85,
+      fovHalf: Math.PI / 4,        /* 90° cone */
+      fovRange: 220,
+      facing: 0,
+      state: 'patrol',
+      patrol: colleguePath,
+      patrolIdx: 1,
+      alertTimer: 0,
+      searchTimer: 0,
+      color: '#5d6f87',
+    },
+    {
+      kind: 'chef',
+      label: 'Chef',
+      x: 1000, y: 60,
+      r: 14,
+      speed: 1.4,
+      chaseSpeed: 2.3,
+      fovHalf: Math.PI / 3,        /* 120° cone */
+      fovRange: 320,
+      facing: 0,
+      state: 'inOffice',
+      home: { x: 1000, y: 60 },
+      tourTarget: null,
+      tourTimer: 6 + Math.random() * 4,
+      alertTimer: 0,
+      searchTimer: 0,
+      color: '#3d2a1f',
+    },
+    {
+      kind: 'stagiaire',
+      label: 'Stagiaire',
+      x: 600, y: 230,
+      r: 12,
+      speed: 1.25,
+      chaseSpeed: 1.95,
+      fovHalf: Math.PI,            /* 360° */
+      fovRange: 140,
+      facing: 0,
+      state: 'wander',
+      wanderTarget: null,
+      wanderTimer: 0,
+      alertTimer: 0,
+      searchTimer: 0,
+      color: '#a85aa0',
+    },
+  ];
+
+  /* =====================================================
+     GAME STATE
+  ===================================================== */
+  let running = false;
+  let won = false;
+  let lost = false;
+  let timeElapsed = 0;
+  let alerts = 0;
+  let lastTime = 0;
+  let nearHide = null;     /* hiding spot under the player, or null */
+  const keys = { up: false, down: false, left: false, right: false, hide: false };
+  let hidePressed = false; /* edge-detect for toggle */
+
+  /* =====================================================
+     INPUT
+  ===================================================== */
+  function onKey(e, down) {
+    const k = e.key.toLowerCase();
+    let handled = true;
+    if (e.code === 'ArrowUp' || k === 'z' || k === 'w') keys.up = down;
+    else if (e.code === 'ArrowDown' || k === 's') keys.down = down;
+    else if (e.code === 'ArrowLeft' || k === 'q' || k === 'a') keys.left = down;
+    else if (e.code === 'ArrowRight' || k === 'd') keys.right = down;
+    else if (e.code === 'Space') {
+      if (down && !hidePressed) toggleHide();
+      hidePressed = down;
+    }
+    else handled = false;
+    if (handled) e.preventDefault();
+  }
+  window.addEventListener('keydown', e => { if (running) onKey(e, true); });
+  window.addEventListener('keyup',   e => { if (running) onKey(e, false); });
+
+  /* Touch dpad */
+  const dpadBtns = document.querySelectorAll('#dpad .btn');
+  dpadBtns.forEach(b => {
+    const dir = b.dataset.dir;
+    const map = { up: 'up', down: 'down', left: 'left', right: 'right' };
+    const press = e => { e.preventDefault(); keys[map[dir]] = true; };
+    const release = e => { e.preventDefault(); keys[map[dir]] = false; };
+    b.addEventListener('touchstart', press, { passive: false });
+    b.addEventListener('touchend', release, { passive: false });
+    b.addEventListener('touchcancel', release, { passive: false });
+    b.addEventListener('mousedown', press);
+    b.addEventListener('mouseup', release);
+    b.addEventListener('mouseleave', release);
+  });
+  const hideBtn = document.getElementById('hideBtn');
+  const hidePress = e => { e.preventDefault(); if (running) toggleHide(); };
+  hideBtn.addEventListener('touchstart', hidePress, { passive: false });
+  hideBtn.addEventListener('click', hidePress);
+
+  /* =====================================================
+     GEOMETRY HELPERS
+  ===================================================== */
+  function aabbCircleHits(cx, cy, r, rect) {
+    const nx = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+    const ny = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+    const dx = cx - nx, dy = cy - ny;
+    return dx * dx + dy * dy < r * r;
+  }
+  function pointInRect(px, py, rect) {
+    return px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h;
+  }
+
+  /* Line segment vs axis-aligned rectangle intersection — used for line-of-sight */
+  function segIntersectsRect(x1, y1, x2, y2, rect) {
+    /* Quick reject */
+    const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+    if (maxX < rect.x || minX > rect.x + rect.w) return false;
+    if (maxY < rect.y || minY > rect.y + rect.h) return false;
+    if (pointInRect(x1, y1, rect) || pointInRect(x2, y2, rect)) return true;
+    /* 4 edges */
+    const edges = [
+      [rect.x, rect.y, rect.x + rect.w, rect.y],
+      [rect.x + rect.w, rect.y, rect.x + rect.w, rect.y + rect.h],
+      [rect.x + rect.w, rect.y + rect.h, rect.x, rect.y + rect.h],
+      [rect.x, rect.y + rect.h, rect.x, rect.y],
+    ];
+    for (const [ax, ay, bx, by] of edges) {
+      if (segIntersectsSeg(x1, y1, x2, y2, ax, ay, bx, by)) return true;
+    }
+    return false;
+  }
+  function segIntersectsSeg(x1, y1, x2, y2, x3, y3, x4, y4) {
+    const d = (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3);
+    if (d === 0) return false;
+    const t = ((x3 - x1) * (y4 - y3) - (y3 - y1) * (x4 - x3)) / d;
+    const u = ((x3 - x1) * (y2 - y1) - (y3 - y1) * (x2 - x1)) / d;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  }
+
+  /* Does enemy see the player? */
+  function enemySees(e, p) {
+    if (p.hidden) return false;
+    const dx = p.x - e.x, dy = p.y - e.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > e.fovRange) return false;
+    if (e.fovHalf < Math.PI - 0.01) {
+      const angleToPlayer = Math.atan2(dy, dx);
+      let delta = angleToPlayer - e.facing;
+      while (delta > Math.PI) delta -= 2 * Math.PI;
+      while (delta < -Math.PI) delta += 2 * Math.PI;
+      if (Math.abs(delta) > e.fovHalf) return false;
+    }
+    /* Line of sight — check no opaque wall in the way */
+    for (const w of walls) {
+      if (w.kind && (w.kind === 'desk' || w.kind === 'table')) continue; /* see over short furniture */
+      if (segIntersectsRect(e.x, e.y, p.x, p.y, w)) return false;
+    }
+    return true;
+  }
+
+  /* Move circle, sliding along axes against walls */
+  function movePlayer(dx, dy) {
+    let nx = player.x + dx;
+    let blocked = false;
+    for (const w of walls) {
+      if (aabbCircleHits(nx, player.y, player.r, w)) { blocked = true; break; }
+    }
+    if (!blocked) player.x = nx;
+
+    let ny = player.y + dy;
+    blocked = false;
+    for (const w of walls) {
+      if (aabbCircleHits(player.x, ny, player.r, w)) { blocked = true; break; }
+    }
+    if (!blocked) player.y = ny;
+
+    player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+    player.y = Math.max(player.r, Math.min(H - player.r, player.y));
+  }
+
+  function moveEnemy(e, dx, dy) {
+    let nx = e.x + dx;
+    let blocked = false;
+    for (const w of walls) {
+      if (aabbCircleHits(nx, e.y, e.r, w)) { blocked = true; break; }
+    }
+    if (!blocked) e.x = nx;
+    let ny = e.y + dy;
+    blocked = false;
+    for (const w of walls) {
+      if (aabbCircleHits(e.x, ny, e.r, w)) { blocked = true; break; }
+    }
+    if (!blocked) e.y = ny;
+    e.x = Math.max(e.r, Math.min(W - e.r, e.x));
+    e.y = Math.max(e.r, Math.min(H - e.r, e.y));
+  }
+
+  function toggleHide() {
+    if (player.hidden) {
+      player.hidden = false;
+    } else if (nearHide) {
+      player.hidden = true;
+      /* snap to spot center for the visual */
+      player.x = nearHide.x + nearHide.w / 2;
+      player.y = nearHide.y + nearHide.h / 2;
+    }
+  }
+
+  /* =====================================================
+     UPDATE
+  ===================================================== */
+  function update(dt) {
+    if (!running) return;
+    timeElapsed += dt;
+
+    /* Player movement */
+    let dx = 0, dy = 0;
+    if (keys.up) dy -= 1;
+    if (keys.down) dy += 1;
+    if (keys.left) dx -= 1;
+    if (keys.right) dx += 1;
+    if (dx || dy) {
+      const len = Math.hypot(dx, dy);
+      dx /= len; dy /= len;
+      player.facing = Math.atan2(dy, dx);
+      if (player.hidden) {
+        /* Coming out of hiding = leaving the spot */
+        player.hidden = false;
+      }
+      movePlayer(dx * player.speed, dy * player.speed);
+    }
+
+    /* Detect hiding spot under player */
+    nearHide = null;
+    for (const h of hidingSpots) {
+      if (pointInRect(player.x, player.y, h)) { nearHide = h; break; }
+    }
+    if (!nearHide && player.hidden) player.hidden = false;
+
+    /* Items pickup */
+    for (const it of items) {
+      if (it.taken) continue;
+      const d = Math.hypot(player.x - it.x, player.y - it.y);
+      if (d < player.r + 14) it.taken = true;
+    }
+
+    /* Enemies AI */
+    enemies.forEach(e => updateEnemy(e, dt));
+
+    /* Win condition */
+    const taken = items.filter(i => i.taken).length;
+    if (taken === items.length && pointInRect(player.x, player.y, exitDoor)) {
+      win();
+    }
+
+    /* HUD */
+    hudFiles.textContent = taken + '/' + items.length;
+    hudFiles.className = 'hud-value' + (taken === items.length ? ' ok' : '');
+    const mm = Math.floor(timeElapsed / 60);
+    const ss = Math.floor(timeElapsed % 60);
+    hudTime.textContent = mm + ':' + (ss < 10 ? '0' : '') + ss;
+    hudAlerts.textContent = alerts;
+    hudAlerts.className = 'hud-value' + (alerts > 0 ? ' alert' : '');
+  }
+
+  function updateEnemy(e, dt) {
+    const sees = enemySees(e, player);
+    const dist = Math.hypot(player.x - e.x, player.y - e.y);
+
+    /* State transitions */
+    if (sees) {
+      if (e.state !== 'chase' && e.state !== 'alert') alerts++;
+      e.state = 'alert';
+      e.alertTimer = 1.6;
+      if (dist < 50) {
+        lose(e);
+        return;
+      }
+    } else if (e.state === 'alert') {
+      e.alertTimer -= dt;
+      if (e.alertTimer <= 0) {
+        e.state = 'search';
+        e.searchTimer = 2.5;
+      }
+    } else if (e.state === 'search') {
+      e.searchTimer -= dt;
+      if (e.searchTimer <= 0) {
+        e.state = e.kind === 'chef' ? 'inOffice' : (e.kind === 'stagiaire' ? 'wander' : 'patrol');
+      }
+    }
+
+    /* Behavior per state */
+    if (e.state === 'alert') {
+      /* Chase player */
+      const dx = player.x - e.x, dy = player.y - e.y;
+      const d = Math.hypot(dx, dy) || 1;
+      e.facing = Math.atan2(dy, dx);
+      moveEnemy(e, (dx / d) * e.chaseSpeed, (dy / d) * e.chaseSpeed);
+    } else if (e.state === 'search') {
+      /* Slow down, look around */
+      e.facing += (Math.random() - 0.5) * 0.05;
+    } else if (e.kind === 'collegue') {
+      patrolEnemy(e, dt);
+    } else if (e.kind === 'chef') {
+      chefBehavior(e, dt);
+    } else if (e.kind === 'stagiaire') {
+      stagiaireBehavior(e, dt);
+    }
+  }
+
+  function patrolEnemy(e, dt) {
+    const tgt = e.patrol[e.patrolIdx];
+    const dx = tgt.x - e.x, dy = tgt.y - e.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 4) {
+      e.patrolIdx = (e.patrolIdx + 1) % e.patrol.length;
+      return;
+    }
+    e.facing = Math.atan2(dy, dx);
+    moveEnemy(e, (dx / d) * e.speed, (dy / d) * e.speed);
+  }
+
+  function chefBehavior(e, dt) {
+    if (e.state === 'inOffice') {
+      /* Stay near home, idle */
+      const dx = e.home.x - e.x, dy = e.home.y - e.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 2) {
+        e.facing = Math.atan2(dy, dx);
+        moveEnemy(e, (dx / d) * e.speed * 0.5, (dy / d) * e.speed * 0.5);
+      } else {
+        /* Look around slowly */
+        e.facing += 0.005;
+      }
+      e.tourTimer -= dt;
+      if (e.tourTimer <= 0) {
+        /* Pick a tour target somewhere outside office */
+        const tourTargets = [
+          { x: 250, y: 700 },
+          { x: 750, y: 470 },
+          { x: 950, y: 700 },
+          { x: 400, y: 230 },
+          { x: 700, y: 230 },
+        ];
+        e.tourTarget = tourTargets[Math.floor(Math.random() * tourTargets.length)];
+        e.state = 'tour';
+      }
+    } else if (e.state === 'tour') {
+      if (!e.tourTarget) e.tourTarget = e.home;
+      const dx = e.tourTarget.x - e.x, dy = e.tourTarget.y - e.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 6) {
+        e.tourTarget = e.home;
+        if (Math.hypot(e.home.x - e.x, e.home.y - e.y) < 6) {
+          e.state = 'inOffice';
+          e.tourTimer = 18 + Math.random() * 12;
+        }
+      } else {
+        e.facing = Math.atan2(dy, dx);
+        moveEnemy(e, (dx / d) * e.speed, (dy / d) * e.speed);
+      }
+    }
+  }
+
+  function stagiaireBehavior(e, dt) {
+    e.wanderTimer -= dt;
+    if (!e.wanderTarget || e.wanderTimer <= 0 ||
+        Math.hypot(e.wanderTarget.x - e.x, e.wanderTarget.y - e.y) < 8) {
+      /* Pick a new random target — biased to corridors and meeting room */
+      const pool = [
+        { x: 600, y: 230 }, { x: 700, y: 350 }, { x: 550, y: 470 },
+        { x: 900, y: 470 }, { x: 300, y: 470 }, { x: 700, y: 480 },
+        { x: 800, y: 650 }, { x: 1000, y: 650 }, { x: 700, y: 800 },
+      ];
+      e.wanderTarget = pool[Math.floor(Math.random() * pool.length)];
+      e.wanderTimer = 2 + Math.random() * 3;
+    }
+    const dx = e.wanderTarget.x - e.x, dy = e.wanderTarget.y - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    e.facing = Math.atan2(dy, dx);
+    moveEnemy(e, (dx / d) * e.speed, (dy / d) * e.speed);
+  }
+
+  /* =====================================================
+     RENDER
+  ===================================================== */
+  function render() {
+    /* Floor */
+    ctx.fillStyle = FLOOR;
+    ctx.fillRect(0, 0, W, H);
+
+    /* Floor zone tints */
+    ctx.fillStyle = '#eef1f5';
+    /* Meeting room */
+    ctx.fillRect(492, 16, 328, 424);
+    /* Chef office */
+    ctx.fillRect(832, 16, 352, 424);
+    /* Kitchen */
+    ctx.fillStyle = '#f3efe6';
+    ctx.fillRect(16, 532, 264, 352);
+    /* Toilets */
+    ctx.fillStyle = '#eef2f5';
+    ctx.fillRect(292, 532, 228, 352);
+
+    /* Corridor floor accent */
+    ctx.fillStyle = '#e4e7eb';
+    ctx.fillRect(16, 452, 1168, 68);
+
+    /* Exit zone */
+    const allTaken = items.every(i => i.taken);
+    ctx.fillStyle = allTaken ? 'rgba(125, 191, 160, 0.45)' : 'rgba(125, 191, 160, 0.15)';
+    ctx.fillRect(exitDoor.x, exitDoor.y, exitDoor.w, exitDoor.h);
+    ctx.fillStyle = allTaken ? '#1f6b48' : '#5d7585';
+    ctx.font = 'bold 18px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('EXIT', exitDoor.x + exitDoor.w / 2, exitDoor.y + exitDoor.h / 2);
+
+    /* Hiding spots — subtle outlined zones */
+    hidingSpots.forEach(h => {
+      ctx.strokeStyle = 'rgba(232, 82, 10, 0.35)';
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(h.x, h.y, h.w, h.h);
+      ctx.setLineDash([]);
+    });
+
+    /* Walls & furniture */
+    walls.forEach(drawWall);
+
+    /* Items */
+    items.forEach(drawItem);
+
+    /* Enemies (vision cones first, then bodies) */
+    enemies.forEach(drawVisionCone);
+    enemies.forEach(drawEnemyBody);
+
+    /* Player */
+    drawPlayer();
+
+    /* Hint when on hiding spot */
+    if (nearHide && !player.hidden && running) {
+      ctx.fillStyle = 'rgba(27, 58, 92, 0.85)';
+      ctx.fillRect(player.x - 70, player.y - 40, 140, 22);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Espace / CACHÉ pour se cacher', player.x, player.y - 24);
+    }
+
+    /* Minimap */
+    drawMinimap();
+  }
+
+  function drawWall(w) {
+    if (w.kind === 'desk') {
+      ctx.fillStyle = '#c9b89a';
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.strokeStyle = '#8a7456';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+      /* monitor */
+      ctx.fillStyle = '#1B3A5C';
+      ctx.fillRect(w.x + w.w / 2 - 14, w.y + 4, 28, 16);
+    } else if (w.kind === 'table') {
+      ctx.fillStyle = '#d8c9a5';
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.strokeStyle = '#8a7456';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+    } else if (w.kind === 'cabinet') {
+      ctx.fillStyle = '#8a96a3';
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.strokeStyle = '#5d6a7a';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+      /* doors */
+      ctx.beginPath();
+      ctx.moveTo(w.x + w.w / 2, w.y);
+      ctx.lineTo(w.x + w.w / 2, w.y + w.h);
+      ctx.stroke();
+    } else if (w.kind === 'counter') {
+      ctx.fillStyle = '#b8a47a';
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.strokeStyle = '#7a6648';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+    } else if (w.kind === 'stall') {
+      ctx.fillStyle = '#cad4dd';
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.strokeStyle = '#7a8896';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+      ctx.fillStyle = '#1B3A5C';
+      ctx.font = '20px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🚽', w.x + w.w / 2, w.y + w.h / 2);
+    } else {
+      ctx.fillStyle = WALL;
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+    }
+  }
+
+  function drawItem(it) {
+    if (it.taken) return;
+    const t = performance.now() * 0.004;
+    const wobble = Math.sin(t + it.x * 0.01) * 2;
+    ctx.font = '24px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    /* Glow */
+    ctx.fillStyle = 'rgba(232, 82, 10, 0.18)';
+    ctx.beginPath();
+    ctx.arc(it.x, it.y + wobble, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText(it.emoji, it.x, it.y + wobble);
+  }
+
+  function drawVisionCone(e) {
+    const alpha = e.state === 'alert' ? 0.32 : 0.22;
+    const color = e.state === 'alert' ? `rgba(232, 82, 10, ${alpha})` :
+                  e.state === 'search' ? `rgba(255, 200, 70, ${alpha})` :
+                  `rgba(255, 230, 130, ${alpha})`;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (e.fovHalf >= Math.PI - 0.01) {
+      ctx.arc(e.x, e.y, e.fovRange, 0, Math.PI * 2);
+    } else {
+      ctx.moveTo(e.x, e.y);
+      ctx.arc(e.x, e.y, e.fovRange, e.facing - e.fovHalf, e.facing + e.fovHalf);
+      ctx.closePath();
+    }
+    ctx.fill();
+  }
+
+  function drawEnemyBody(e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    /* Body */
+    ctx.fillStyle = e.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, e.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1B3A5C';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    /* Face direction triangle */
+    ctx.rotate(e.facing);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(e.r * 0.8, 0);
+    ctx.lineTo(0, -e.r * 0.45);
+    ctx.lineTo(0, e.r * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    /* Label */
+    ctx.fillStyle = '#1B3A5C';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(e.label, e.x, e.y - e.r - 6);
+    /* Alert marker */
+    if (e.state === 'alert') {
+      ctx.fillStyle = ORANGE;
+      ctx.font = 'bold 18px system-ui';
+      ctx.fillText('!', e.x, e.y - e.r - 18);
+    } else if (e.state === 'search') {
+      ctx.fillStyle = '#b58a1f';
+      ctx.font = 'bold 14px system-ui';
+      ctx.fillText('?', e.x, e.y - e.r - 18);
+    }
+  }
+
+  function drawPlayer() {
+    ctx.save();
+    if (player.hidden) {
+      ctx.globalAlpha = 0.45;
+    }
+    /* Body */
+    ctx.fillStyle = ORANGE;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = NAVY;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    /* Tie */
+    ctx.fillStyle = NAVY;
+    ctx.fillRect(player.x - 2, player.y - 2, 4, 8);
+    ctx.restore();
+
+    if (player.hidden) {
+      ctx.fillStyle = 'rgba(27, 58, 92, 0.85)';
+      ctx.fillRect(player.x - 28, player.y - 36, 56, 18);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('CACHÉ', player.x, player.y - 23);
+    }
+  }
+
+  function drawMinimap() {
+    const sx = minimap.width / W;
+    const sy = minimap.height / H;
+    mctx.clearRect(0, 0, minimap.width, minimap.height);
+    /* Background */
+    mctx.fillStyle = '#f1f3f5';
+    mctx.fillRect(0, 0, minimap.width, minimap.height);
+    /* Walls */
+    mctx.fillStyle = NAVY;
+    walls.forEach(w => {
+      if (w.kind) return;
+      mctx.fillRect(w.x * sx, w.y * sy, Math.max(1, w.w * sx), Math.max(1, w.h * sy));
+    });
+    /* Items */
+    mctx.fillStyle = ORANGE;
+    items.forEach(it => {
+      if (it.taken) return;
+      mctx.beginPath();
+      mctx.arc(it.x * sx, it.y * sy, 2, 0, Math.PI * 2);
+      mctx.fill();
+    });
+    /* Exit */
+    mctx.fillStyle = items.every(i => i.taken) ? '#2a8f6b' : '#5d7585';
+    mctx.fillRect(exitDoor.x * sx, exitDoor.y * sy, exitDoor.w * sx, exitDoor.h * sy);
+    /* Enemies */
+    enemies.forEach(e => {
+      mctx.fillStyle = e.state === 'alert' ? '#c44508' : e.color;
+      mctx.beginPath();
+      mctx.arc(e.x * sx, e.y * sy, 3, 0, Math.PI * 2);
+      mctx.fill();
+    });
+    /* Player */
+    mctx.fillStyle = '#fff';
+    mctx.strokeStyle = ORANGE;
+    mctx.lineWidth = 2;
+    mctx.beginPath();
+    mctx.arc(player.x * sx, player.y * sy, 3, 0, Math.PI * 2);
+    mctx.fill();
+    mctx.stroke();
+  }
+
+  /* =====================================================
+     GAME FLOW
+  ===================================================== */
+  function startGame() {
+    /* Reset state */
+    running = true;
+    won = false;
+    lost = false;
+    timeElapsed = 0;
+    alerts = 0;
+    player.x = 100;
+    player.y = 480;
+    player.hidden = false;
+    items.forEach(i => i.taken = false);
+    enemies.forEach((e, i) => {
+      if (e.kind === 'collegue') {
+        e.x = 80; e.y = 60; e.patrolIdx = 1; e.state = 'patrol';
+      } else if (e.kind === 'chef') {
+        e.x = 1000; e.y = 60; e.state = 'inOffice'; e.tourTimer = 6 + Math.random() * 4;
+      } else {
+        e.x = 600; e.y = 230; e.state = 'wander'; e.wanderTarget = null; e.wanderTimer = 0;
+      }
+      e.alertTimer = 0; e.searchTimer = 0;
+    });
+    overlay.classList.add('hidden');
+    lastTime = 0;
+    requestAnimationFrame(loop);
+  }
+
+  function win() {
+    running = false;
+    won = true;
+    overlay.innerHTML = '';
+    overlay.classList.remove('hidden');
+    const h = document.createElement('h2');
+    h.textContent = 'Bien joué ! Tu as survécu à la journée ☀️';
+    overlay.appendChild(h);
+    const p = document.createElement('p');
+    p.textContent = 'Tu peux enfin rentrer. Les dossiers sont sécurisés et personne ne t\'a vu.';
+    overlay.appendChild(p);
+    const stats = document.createElement('div');
+    stats.className = 'final-stats';
+    const mm = Math.floor(timeElapsed / 60);
+    const ss = Math.floor(timeElapsed % 60);
+    stats.textContent = 'Temps : ' + mm + ':' + (ss < 10 ? '0' : '') + ss + ' — Alertes : ' + alerts;
+    overlay.appendChild(stats);
+    const btns = document.createElement('div');
+    btns.className = 'overlay-buttons';
+    const replay = document.createElement('button');
+    replay.textContent = 'Rejouer';
+    replay.addEventListener('click', startGame);
+    btns.appendChild(replay);
+    const back = document.createElement('a');
+    back.href = 'index.html';
+    back.style.textDecoration = 'none';
+    const backBtn = document.createElement('button');
+    backBtn.className = 'secondary';
+    backBtn.textContent = '← Menu';
+    back.appendChild(backBtn);
+    btns.appendChild(back);
+    overlay.appendChild(btns);
+  }
+
+  function lose(byEnemy) {
+    running = false;
+    lost = true;
+    overlay.innerHTML = '';
+    overlay.classList.remove('hidden');
+    const h = document.createElement('h2');
+    h.textContent = byEnemy.kind === 'chef'
+      ? 'Le chef t\'a eu... Encore une heure sup\' 😩'
+      : byEnemy.kind === 'collegue'
+        ? 'Le collègue veut absolument te raconter sa journée. 😴'
+        : 'La stagiaire a tout vu. Réunion impromptue ! 🫠';
+    overlay.appendChild(h);
+    const p = document.createElement('p');
+    p.textContent = 'Tu n\'es pas passé entre les mailles du filet cette fois.';
+    overlay.appendChild(p);
+    const stats = document.createElement('div');
+    stats.className = 'final-stats';
+    const taken = items.filter(i => i.taken).length;
+    const mm = Math.floor(timeElapsed / 60);
+    const ss = Math.floor(timeElapsed % 60);
+    stats.textContent = 'Dossiers : ' + taken + '/' + items.length + ' — Temps : ' + mm + ':' + (ss < 10 ? '0' : '') + ss + ' — Alertes : ' + alerts;
+    overlay.appendChild(stats);
+    const btns = document.createElement('div');
+    btns.className = 'overlay-buttons';
+    const replay = document.createElement('button');
+    replay.textContent = 'Rejouer';
+    replay.addEventListener('click', startGame);
+    btns.appendChild(replay);
+    const back = document.createElement('a');
+    back.href = 'index.html';
+    back.style.textDecoration = 'none';
+    const backBtn = document.createElement('button');
+    backBtn.className = 'secondary';
+    backBtn.textContent = '← Menu';
+    back.appendChild(backBtn);
+    btns.appendChild(back);
+    overlay.appendChild(btns);
+  }
+
+  function loop(t) {
+    if (!running) { render(); return; }
+    if (!lastTime) lastTime = t;
+    let dt = (t - lastTime) / 1000;
+    if (dt > 0.1) dt = 0.1;
+    lastTime = t;
+    update(dt);
+    render();
+    if (running) requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener('click', startGame);
+
+  /* Initial draw so the map is visible behind the overlay */
+  render();
+})();
+</script>
+</body>
+</html>
