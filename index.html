@@ -768,7 +768,7 @@
       <p class="subtitle">Testez vos réflexes… et vos connaissances !</p>
       <div class="stats-bar">
         <div class="stat">
-          <div class="stat-value" id="totalGames">4</div>
+          <div class="stat-value" id="totalGames">5</div>
           <div class="stat-label">Jeux disponibles</div>
         </div>
         <div class="stat">
@@ -812,6 +812,14 @@
         <div class="card-icon">🦘</div>
         <div class="card-title">L'Ascension du Comptable</div>
         <div class="card-description">Saute de plateforme en plateforme et grimpe le plus haut possible dans la hiérarchie fiscale. Évite les contrôleurs !</div>
+        <span class="btn">Jouer</span>
+      </a>
+
+      <a href="evasion.html" class="card active">
+        <span class="card-status status-active">En ligne</span>
+        <div class="card-icon">🕵️</div>
+        <div class="card-title">L'Évasion du Comptable</div>
+        <div class="card-description">Récupère tes 8 dossiers et fuis le bureau sans te faire repérer par le chef, le collègue et la stagiaire !</div>
         <span class="btn">Jouer</span>
       </a>
     </div>
@@ -2376,10 +2384,9 @@ onShow.menu = refreshMenuStats;
     { emoji: '🍺', name: 'Apéro mérité', positive: true },
     { emoji: '🏝️', name: 'Vacances en vue', positive: true },
     { emoji: '📋', name: 'Client organisé', positive: true },
-    { emoji: '🤖', name: "L'IA te sauve", positive: true },
     { emoji: '📞', name: 'Appel à 18h59', positive: false },
     { emoji: '✉️', name: 'Mail urgent', positive: false },
-    { emoji: '📦', name: 'Dossier catastrophe', positive: false },
+    { emoji: '📦', name: 'Compte 471', positive: false },
     { emoji: '⚠️', name: 'Contrôle URSSAF', positive: false },
   ];
 
@@ -2514,7 +2521,7 @@ onShow.menu = refreshMenuStats;
       kind = 'neutral';
     } else {
       message = pick([
-        "URSSAF + Mail urgent + Dossier catastrophe : bonne chance 🫡",
+        "URSSAF + Mail urgent + Compte 471 : bonne chance 🫡",
         "On ne peut rien pour vous. Appelez votre comptable.",
         "Contrôle fiscal détecté. Respirez.",
       ]);
