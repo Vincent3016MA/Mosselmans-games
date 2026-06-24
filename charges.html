@@ -238,12 +238,12 @@
   <div id="gameContainer">
     <canvas id="game"></canvas>
     <div id="overlay">
-      <h2>Prêt pour le contrôle fiscal ?</h2>
-      <p>Collecte toutes les <strong>pièces justificatives</strong> (points) avant que le contrôleur ne t'attrape.<br>
-      Les <strong>liasses fiscales</strong> (gros points orange) te rendent invincible quelques secondes !</p>
+      <h2>Prêt pour la clôture de paie ?</h2>
+      <p>Collecte tous les <strong>bulletins de salaire</strong> (points) avant que le contrôleur URSSAF ne t'attrape.<br>
+      Les <strong>déclarations DSN</strong> (gros points orange) te rendent invincible quelques secondes !</p>
       <div class="legend">
-        <div class="legend-item"><span class="legend-swatch" style="background:#E8520A"></span> Comptable</div>
-        <div class="legend-item"><span class="legend-swatch" style="background:#1B3A5C"></span> Contrôleur</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#E8520A"></span> Gestionnaire paie</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#c4002a"></span> Contrôleur URSSAF</div>
         <div class="legend-item"><span class="legend-swatch" style="background:#7DBFA0"></span> Vulnérable</div>
       </div>
       <p style="font-size:12px;color:#8a96a3"><strong>Flèches</strong> au clavier ou <strong>swipe</strong> sur mobile</p>
@@ -284,6 +284,11 @@
   const ROWS = MAZE.length;
   const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
   const ORANGE = '#E8520A', NAVY = '#1B3A5C', GREEN = '#7DBFA0', RED = '#c4002a';
+
+  const enemyImg = new Image();
+  enemyImg.src = 'MONSTRE%20JEUX%20PAC%20MAN.png';
+  let enemyImgReady = false;
+  enemyImg.addEventListener('load', () => { enemyImgReady = true; });
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
@@ -604,54 +609,22 @@
 
   function drawEnemy(e) {
     const x = e.x, y = e.y;
-    const r = TILE * 0.42;
+    const size = TILE * 1.1;
     const expiring = e.vulnerable && powerTimer < 2 && Math.floor(powerTimer * 5) % 2 === 0;
-    const color = e.vulnerable ? (expiring ? '#ffffff' : GREEN) : NAVY;
-    const stroke = e.vulnerable ? (expiring ? GREEN : '#5ca884') : '#0f2740';
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y - r*0.1, r, Math.PI, 0, false);
-    ctx.lineTo(x + r, y + r*0.7);
-    const segs = 4;
-    for (let i = 0; i < segs; i++) {
-      const px = x + r - 2*r * (i+1) / segs;
-      const dip = i % 2 === 0 ? r*0.85 : r*0.65;
-      ctx.lineTo(px + r/segs * 0.5, y + r*0.7);
-      ctx.lineTo(px, y + dip);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    if (!e.vulnerable) {
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x - r*0.32, y - r*0.2, r*0.2, 0, Math.PI*2);
-      ctx.arc(x + r*0.32, y - r*0.2, r*0.2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = ORANGE;
-      const lx = DIRS[e.dir][0] * r * 0.08;
-      const ly = DIRS[e.dir][1] * r * 0.08;
-      ctx.beginPath();
-      ctx.arc(x - r*0.32 + lx, y - r*0.2 + ly, r*0.1, 0, Math.PI*2);
-      ctx.arc(x + r*0.32 + lx, y - r*0.2 + ly, r*0.1, 0, Math.PI*2);
-      ctx.fill();
-    } else {
-      const eyeColor = expiring ? NAVY : '#1B3A5C';
-      ctx.fillStyle = eyeColor;
-      ctx.fillRect(x - r*0.42, y - r*0.3, r*0.22, r*0.22);
-      ctx.fillRect(x + r*0.2, y - r*0.3, r*0.22, r*0.22);
-      ctx.strokeStyle = eyeColor;
-      ctx.lineWidth = Math.max(1.2, TILE*0.05);
-      ctx.beginPath();
-      const mY = y + r*0.25;
-      const mW = r*0.7;
-      ctx.moveTo(x - mW/2, mY);
-      for (let i = 1; i <= 5; i++) {
-        ctx.lineTo(x - mW/2 + (mW * i / 5), mY + (i % 2 === 0 ? 0 : -r*0.12));
+    if (enemyImgReady) {
+      ctx.save();
+      if (e.vulnerable) {
+        ctx.globalAlpha = expiring ? 0.45 : 0.6;
+        ctx.filter = 'grayscale(0.7) hue-rotate(120deg)';
       }
-      ctx.stroke();
+      ctx.drawImage(enemyImg, x - size/2, y - size/2, size, size);
+      ctx.restore();
+    } else {
+      const color = e.vulnerable ? (expiring ? '#ffffff' : GREEN) : RED;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, size/2, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -721,10 +694,10 @@
   function endGame(won) {
     running = false;
     gameOver = true;
-    const title = won ? 'Bravo, exercice clos !' : 'Le contrôleur t\'a coincé !';
+    const title = won ? 'Bravo, paie clôturée !' : 'L\'URSSAF t\'a coincé !';
     const msg = won
-      ? 'Tu as survécu à tous les contrôles fiscaux. Le cabinet est fier de toi.'
-      : 'Pas de panique, la jurisprudence évolue. Retente ta chance !';
+      ? 'Tu as bouclé toutes les DSN dans les temps. Les salariés t\'adorent.'
+      : 'Pas de panique, on repart sur une nouvelle période de paie. Retente ta chance !';
     overlay.innerHTML = `
       <h2>${title}</h2>
       <p>${msg}</p>

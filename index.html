@@ -695,6 +695,8 @@
   }
   .b-legend-item { display: flex; align-items: center; gap: 8px; }
   .b-legend-emoji { font-size: 18px; line-height: 1; }
+  .b-legend-emoji img { width: 22px; height: 22px; object-fit: contain; display: block; }
+  .b-symbol img { width: 80%; height: 80%; object-fit: contain; display: block; margin: auto; }
   @media (max-width: 500px) {
     #b-machineWrap { padding: 18px 14px 22px; }
     .b-machine { padding: 12px 8px; gap: 8px; }
@@ -795,7 +797,7 @@
         <span class="card-status status-active">En ligne</span>
         <div class="card-icon">👻</div>
         <div class="card-title">L'Inspecteur des Charges</div>
-        <div class="card-description">Collectez les pièces justificatives dans le labyrinthe avant que le contrôleur fiscal ne vous rattrape !</div>
+        <div class="card-description">Collectez bulletins, DSN et fiches de congés dans le labyrinthe avant que le contrôleur URSSAF ne vous rattrape !</div>
         <span class="btn">Jouer</span>
       </a>
 
@@ -886,12 +888,12 @@
     <div id="c-gameContainer">
       <canvas id="c-game"></canvas>
       <div id="c-overlay">
-        <h2>Prêt pour le contrôle fiscal ?</h2>
-        <p>Collecte toutes les <strong>pièces justificatives</strong> (points) avant que le contrôleur ne t'attrape.<br>
-        Les <strong>liasses fiscales</strong> (gros points orange) te rendent invincible quelques secondes !</p>
+        <h2>Prêt pour la clôture de paie ?</h2>
+        <p>Collecte tous les <strong>bulletins de salaire</strong> (points) avant que le contrôleur URSSAF ne t'attrape.<br>
+        Les <strong>déclarations DSN</strong> (gros points orange) te rendent invincible quelques secondes !</p>
         <div class="legend">
-          <div class="legend-item"><span class="legend-swatch" style="background:#E8520A"></span> Comptable</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#1B3A5C"></span> Contrôleur</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#E8520A"></span> Gestionnaire paie</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#c4002a"></span> Contrôleur URSSAF</div>
           <div class="legend-item"><span class="legend-swatch" style="background:#7DBFA0"></span> Vulnérable</div>
         </div>
         <p style="font-size:12px;color:#8a96a3"><strong>Flèches</strong> au clavier ou <strong>swipe</strong> sur mobile</p>
@@ -1790,6 +1792,11 @@ onShow.menu = refreshMenuStats;
   const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
   const ORANGE = '#E8520A', NAVY = '#1B3A5C', GREEN = '#7DBFA0', RED = '#c4002a';
 
+  const enemyImg = new Image();
+  enemyImg.src = 'MONSTRE%20JEUX%20PAC%20MAN.png';
+  let enemyImgReady = false;
+  enemyImg.addEventListener('load', () => { enemyImgReady = true; });
+
   const canvas = document.getElementById('c-game');
   const ctx = canvas.getContext('2d');
   const overlay = document.getElementById('c-overlay');
@@ -2131,54 +2138,22 @@ onShow.menu = refreshMenuStats;
 
   function drawEnemy(e) {
     const x = e.x, y = e.y;
-    const r = TILE * 0.42;
+    const size = TILE * 1.1;
     const expiring = e.vulnerable && powerTimer < 2 && Math.floor(powerTimer * 5) % 2 === 0;
-    const color = e.vulnerable ? (expiring ? '#ffffff' : GREEN) : NAVY;
-    const stroke = e.vulnerable ? (expiring ? GREEN : '#5ca884') : '#0f2740';
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y - r*0.1, r, Math.PI, 0, false);
-    ctx.lineTo(x + r, y + r*0.7);
-    const segs = 4;
-    for (let i = 0; i < segs; i++) {
-      const px = x + r - 2*r * (i+1) / segs;
-      const dip = i % 2 === 0 ? r*0.85 : r*0.65;
-      ctx.lineTo(px + r/segs * 0.5, y + r*0.7);
-      ctx.lineTo(px, y + dip);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    if (!e.vulnerable) {
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x - r*0.32, y - r*0.2, r*0.2, 0, Math.PI*2);
-      ctx.arc(x + r*0.32, y - r*0.2, r*0.2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = ORANGE;
-      const lx = DIRS[e.dir][0] * r * 0.08;
-      const ly = DIRS[e.dir][1] * r * 0.08;
-      ctx.beginPath();
-      ctx.arc(x - r*0.32 + lx, y - r*0.2 + ly, r*0.1, 0, Math.PI*2);
-      ctx.arc(x + r*0.32 + lx, y - r*0.2 + ly, r*0.1, 0, Math.PI*2);
-      ctx.fill();
-    } else {
-      const eyeColor = expiring ? NAVY : '#1B3A5C';
-      ctx.fillStyle = eyeColor;
-      ctx.fillRect(x - r*0.42, y - r*0.3, r*0.22, r*0.22);
-      ctx.fillRect(x + r*0.2, y - r*0.3, r*0.22, r*0.22);
-      ctx.strokeStyle = eyeColor;
-      ctx.lineWidth = Math.max(1.2, TILE*0.05);
-      ctx.beginPath();
-      const mY = y + r*0.25;
-      const mW = r*0.7;
-      ctx.moveTo(x - mW/2, mY);
-      for (let i = 1; i <= 5; i++) {
-        ctx.lineTo(x - mW/2 + (mW * i / 5), mY + (i % 2 === 0 ? 0 : -r*0.12));
+    if (enemyImgReady) {
+      ctx.save();
+      if (e.vulnerable) {
+        ctx.globalAlpha = expiring ? 0.45 : 0.6;
+        ctx.filter = 'grayscale(0.7) hue-rotate(120deg)';
       }
-      ctx.stroke();
+      ctx.drawImage(enemyImg, x - size/2, y - size/2, size, size);
+      ctx.restore();
+    } else {
+      const color = e.vulnerable ? (expiring ? '#ffffff' : GREEN) : RED;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, size/2, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -2281,10 +2256,10 @@ onShow.menu = refreshMenuStats;
   function endGame(won) {
     running = false;
     gameOver = true;
-    const title = won ? 'Bravo, exercice clos !' : 'Le contrôleur t\'a coincé !';
+    const title = won ? 'Bravo, paie clôturée !' : 'L\'URSSAF t\'a coincé !';
     const msg = won
-      ? 'Tu as survécu à tous les contrôles fiscaux. Le cabinet est fier de toi.'
-      : 'Pas de panique, la jurisprudence évolue. Retente ta chance !';
+      ? 'Tu as bouclé toutes les DSN dans les temps. Les salariés t\'adorent.'
+      : 'Pas de panique, on repart sur une nouvelle période de paie. Retente ta chance !';
     overlay.innerHTML = `
       <h2>${title}</h2>
       <p>${msg}</p>
@@ -2302,12 +2277,12 @@ onShow.menu = refreshMenuStats;
     running = false;
     gameOver = false;
     overlay.innerHTML = `
-      <h2>Prêt pour le contrôle fiscal ?</h2>
-      <p>Collecte toutes les <strong>pièces justificatives</strong> (points) avant que le contrôleur ne t'attrape.<br>
-      Les <strong>liasses fiscales</strong> (gros points orange) te rendent invincible quelques secondes !</p>
+      <h2>Prêt pour la clôture de paie ?</h2>
+      <p>Collecte tous les <strong>bulletins de salaire</strong> (points) avant que le contrôleur URSSAF ne t'attrape.<br>
+      Les <strong>déclarations DSN</strong> (gros points orange) te rendent invincible quelques secondes !</p>
       <div class="legend">
-        <div class="legend-item"><span class="legend-swatch" style="background:#E8520A"></span> Comptable</div>
-        <div class="legend-item"><span class="legend-swatch" style="background:#1B3A5C"></span> Contrôleur</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#E8520A"></span> Gestionnaire paie</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#c4002a"></span> Contrôleur URSSAF</div>
         <div class="legend-item"><span class="legend-swatch" style="background:#7DBFA0"></span> Vulnérable</div>
       </div>
       <p style="font-size:12px;color:#8a96a3"><strong>Flèches</strong> au clavier ou <strong>swipe</strong> sur mobile</p>
@@ -2371,15 +2346,15 @@ onShow.menu = refreshMenuStats;
    BILAN-O-MATIC 3000
 ========================================================= */
 (() => {
+  const DOSSIER_471_IMG = 'Logo%20Dossier%20471.png';
   const SYMBOLS = [
     { emoji: '☕', name: 'Café salvateur', positive: true },
     { emoji: '🍺', name: 'Apéro mérité', positive: true },
     { emoji: '🏝️', name: 'Vacances en vue', positive: true },
     { emoji: '📋', name: 'Client organisé', positive: true },
-    { emoji: '🤖', name: "L'IA te sauve", positive: true },
     { emoji: '📞', name: 'Appel à 18h59', positive: false },
     { emoji: '✉️', name: 'Mail urgent', positive: false },
-    { emoji: '📦', name: 'Dossier catastrophe', positive: false },
+    { image: DOSSIER_471_IMG, emoji: '📁', name: 'Dossier 471', positive: false },
     { emoji: '⚠️', name: 'Contrôle URSSAF', positive: false },
   ];
 
@@ -2392,10 +2367,15 @@ onShow.menu = refreshMenuStats;
   const resultEl = document.getElementById('b-result');
   const legendGrid = document.getElementById('b-legendGrid');
 
+  function symbolMarkup(s) {
+    if (s.image) return '<img src="' + s.image + '" alt="' + s.name + '">';
+    return s.emoji;
+  }
+
   SYMBOLS.forEach(s => {
     const item = document.createElement('div');
     item.className = 'b-legend-item';
-    item.innerHTML = '<span class="b-legend-emoji">' + s.emoji + '</span><span>' + s.name + '</span>';
+    item.innerHTML = '<span class="b-legend-emoji">' + symbolMarkup(s) + '</span><span>' + s.name + '</span>';
     legendGrid.appendChild(item);
   });
 
@@ -2408,7 +2388,7 @@ onShow.menu = refreshMenuStats;
   }
 
   function setReelSymbol(reel, idx) {
-    reel.querySelector('.b-symbol').textContent = SYMBOLS[idx].emoji;
+    reel.querySelector('.b-symbol').innerHTML = symbolMarkup(SYMBOLS[idx]);
   }
 
   function clearAllIntervals() {
@@ -2514,7 +2494,7 @@ onShow.menu = refreshMenuStats;
       kind = 'neutral';
     } else {
       message = pick([
-        "URSSAF + Mail urgent + Dossier catastrophe : bonne chance 🫡",
+        "URSSAF + Mail urgent + Dossier 471 : bonne chance 🫡",
         "On ne peut rien pour vous. Appelez votre comptable.",
         "Contrôle fiscal détecté. Respirez.",
       ]);
@@ -2581,10 +2561,16 @@ onShow.menu = refreshMenuStats;
   const GRAVITY = 0.26;
   const JUMP_VY = -10.5;
   const JUMP_VY_BIG = -15;
+  const JUMP_VY_MEGA = -24;
   const JETPACK_VY = -7;
   const MOVE_ACCEL = 0.7;
   const MOVE_MAX = 6.2;
   const FRICTION = 0.85;
+
+  const playerImg = new Image();
+  playerImg.src = 'personnage%20doodle.png';
+  let playerImgReady = false;
+  playerImg.addEventListener('load', () => { playerImgReady = true; });
 
   /* World state */
   let platforms = [];
@@ -2786,12 +2772,28 @@ onShow.menu = refreshMenuStats;
     }
 
     /* Horizontal input */
-    const maxSpd = MOVE_MAX * (player.coffee > 0 ? 1.5 : 1);
     if (pressLeft) { player.vx -= MOVE_ACCEL; player.facing = -1; }
     if (pressRight) { player.vx += MOVE_ACCEL; player.facing = 1; }
     if (!pressLeft && !pressRight) player.vx *= FRICTION;
-    if (player.vx > maxSpd) player.vx = maxSpd;
-    if (player.vx < -maxSpd) player.vx = -maxSpd;
+    if (player.vx > MOVE_MAX) player.vx = MOVE_MAX;
+    if (player.vx < -MOVE_MAX) player.vx = -MOVE_MAX;
+
+    /* Coffee mega-jump trail: orange sparks while ascending */
+    if (player.coffee > 0 && player.vy < 0) {
+      for (let i = 0; i < 2; i++) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+        const sp = 1.5 + Math.random() * 2;
+        particles.push({
+          x: player.x + (Math.random() - 0.5) * player.w * 0.7,
+          y: player.y + player.h / 2,
+          vx: Math.cos(angle) * sp,
+          vy: Math.sin(angle) * sp + 2,
+          life: 0.45 + Math.random() * 0.3,
+          max: 0.7,
+          color: Math.random() < 0.5 ? '#ff9a3a' : '#ffd34a',
+        });
+      }
+    }
 
     /* Vertical physics */
     if (player.jetpack > 0) {
@@ -2900,7 +2902,12 @@ onShow.menu = refreshMenuStats;
       const dy = pu.y - player.y;
       if (Math.abs(dx) < 22 && Math.abs(dy) < 26) {
         pu.taken = true;
-        if (pu.kind === 'coffee') { player.coffee = 4; spawnBurst(pu.x, pu.y, '#a87b4f'); }
+        if (pu.kind === 'coffee') {
+          player.coffee = 1.4;
+          player.vy = JUMP_VY_MEGA;
+          spawnBurst(pu.x, pu.y, '#ff9a3a');
+          spawnBurst(player.x, player.y, '#ffd34a');
+        }
         else if (pu.kind === 'shield') { player.shield = 5; spawnBurst(pu.x, pu.y, '#7dbfa0'); }
         else if (pu.kind === 'jetpack') { player.jetpack = 2.5; player.vy = JETPACK_VY; spawnBurst(pu.x, pu.y, '#ff7a3a'); }
       }
@@ -3165,47 +3172,33 @@ onShow.menu = refreshMenuStats;
       ctx.lineTo(x, y + player.h / 2 + 14 + Math.random() * 6);
       ctx.fill();
     }
+    /* Coffee mega-jump aura */
+    if (player.coffee > 0) {
+      const pulse = (Math.sin(performance.now() * 0.025) + 1) * 0.5;
+      ctx.fillStyle = 'rgba(255, 154, 58, ' + (0.18 + pulse * 0.22) + ')';
+      ctx.beginPath();
+      ctx.arc(x, y, 30, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    /* Body — small comptable: shirt + tie */
-    ctx.fillStyle = '#fce6c6';
-    ctx.beginPath();
-    ctx.arc(x, y - 8, 11, 0, Math.PI * 2); // head
-    ctx.fill();
-
-    /* hair */
-    ctx.fillStyle = '#3a2a1f';
-    ctx.beginPath();
-    ctx.arc(x, y - 12, 11, Math.PI, 0);
-    ctx.fill();
-
-    /* shirt body */
-    ctx.fillStyle = '#ffffff';
-    roundRect(x - 12, y, 24, 20, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#1B3A5C';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    /* tie */
-    ctx.fillStyle = ORANGE;
-    ctx.beginPath();
-    ctx.moveTo(x - 3, y);
-    ctx.lineTo(x + 3, y);
-    ctx.lineTo(x + 2, y + 12);
-    ctx.lineTo(x, y + 16);
-    ctx.lineTo(x - 2, y + 12);
-    ctx.closePath();
-    ctx.fill();
-
-    /* glasses */
-    ctx.strokeStyle = '#1B3A5C';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(x - 4, y - 8, 3, 0, Math.PI * 2);
-    ctx.arc(x + 4, y - 8, 3, 0, Math.PI * 2);
-    ctx.moveTo(x - 1, y - 8);
-    ctx.lineTo(x + 1, y - 8);
-    ctx.stroke();
+    const drawW = 44;
+    const drawH = 52;
+    if (playerImgReady) {
+      ctx.save();
+      if (player.facing < 0) {
+        ctx.translate(x, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(playerImg, -drawW / 2, -drawH / 2, drawW, drawH);
+      } else {
+        ctx.drawImage(playerImg, x - drawW / 2, y - drawH / 2, drawW, drawH);
+      }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#fce6c6';
+      ctx.beginPath();
+      ctx.arc(x, y, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
